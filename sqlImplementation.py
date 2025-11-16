@@ -48,12 +48,13 @@ def get_item(item_id):
         return None
     return item
 
-@app.post('/AddItem')
+@app.route('/AddItem', methods=['POST'])
 def add_item(title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp):
     db = get_db()
     cur = db.execute('INSERT INTO "Study Groups" (title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp, createdAt) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)', (title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp, datetime.datetime.now()))
     db.commit()
     lastrowid = cur.lastrowid
+    return 201
 
 def update_item(item):
     db = get_db()
@@ -71,7 +72,7 @@ def dataBase():
     db = get_db()
     cur = db.execute('SELECT * FROM "Study Groups"')
     rows = cur.fetchall()
-    return jsonify({row['id']: dict(row) for row in rows})
+    return jsonify([dict(row) for row in rows])
 
 
 @app.route('/dataBase/singleItem/<int:id>')
@@ -79,7 +80,7 @@ def singleItem(id):
     db = get_db()
     cur = db.execute('SELECT * FROM "Study Groups" WHERE id = ?', (id,))
     row = cur.fetchone()
-    return {row['id']: dict(row)}
+    return jsonify(dict(row))
 
 @app.route('/SignUpPerson/<int:id>', methods=['GET'])
 def SignUpPerson(id):
