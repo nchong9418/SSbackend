@@ -106,7 +106,7 @@ def singleItem(id):
         return jsonify({'error': 'Not found'}), 404
     return jsonify(dict(row))
 
-@app.route('/SignUpPerson/<int:id>', methods=['GET'])
+@app.route('/SignUpPerson/<int:id>')
 def SignUpPerson(id):
     personSignedUp(id)
     return jsonify({"success": True})
