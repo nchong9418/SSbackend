@@ -48,12 +48,36 @@ def get_item(item_id):
         return None
     return item
 
-@app.post('/AddItem')
-def add_item(title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp):
+@app.post('/addItem')  # note: lowercase to match your frontend fetch
+def add_item():
+    data = request.get_json(force=True) or {}
+
+    # pull fields with minimal touching; keep tags exactly as sent
+    title         = data.get('title')
+    courseCode    = data.get('courseCode')
+    focusLevel    = data.get('focusLevel')
+    startTime     = data.get('startTime')
+    endTime       = data.get('endTime')
+    location      = data.get('location')
+    tags          = data.get('tags')              # string like "a,b" or "[a, b]"
+    description   = data.get('description')
+    hostName      = data.get('hostName')
+    personLimit   = int(data.get('personLimit', 0))
+    peopleSignedUp= int(data.get('peopleSignedUp', 0))
+    createdAt     = datetime.datetime.now().isoformat(timespec='seconds')
+
     db = get_db()
-    cur = db.execute('INSERT INTO "Study Groups" (title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp, createdAt) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)', (title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp, datetime.datetime.now()))
+    cur = db.execute(
+        'INSERT INTO "Study Groups" '
+        '(title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp, createdAt) '
+        'VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+        (title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp, createdAt)
+    )
     db.commit()
-    lastrowid = cur.lastrowid
+
+    new_id = cur.lastrowid
+    row = db.execute('SELECT * FROM "Study Groups" WHERE id = ?', (new_id,)).fetchone()
+    return jsonify(dict(row)), 201
 
 def update_item(item):
     db = get_db()
@@ -71,27 +95,29 @@ def dataBase():
     db = get_db()
     cur = db.execute('SELECT * FROM "Study Groups"')
     rows = cur.fetchall()
-    return jsonify({row['id']: dict(row) for row in rows})
+    return jsonify([dict(row) for row in rows])
 
 
-@app.route('/dataBase/singleItem/<int:id>')
+@app.get('/dataBase/singleItem/<int:id>')
 def singleItem(id):
     db = get_db()
-    cur = db.execute('SELECT * FROM "Study Groups" WHERE id = ?', (id,))
-    row = cur.fetchone()
-    return {row['id']: dict(row)}
+    row = db.execute('SELECT * FROM "Study Groups" WHERE id = ?', (id,)).fetchone()
+    if row is None:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify(dict(row))
 
 @app.route('/SignUpPerson/<int:id>', methods=['GET'])
 def SignUpPerson(id):
     personSignedUp(id)
     return jsonify({"success": True})
 
-@app.route('/deleteItem')
+@app.delete('/deleteItem/<int:id>')
 def deleteItem(id):
     db = get_db()
-    db.execute('DELETE FROM "Study Groups" WHERE id = ?', (id,))
+    cur = db.execute('DELETE FROM "Study Groups" WHERE id = ?', (id,))
     db.commit()
-    return {"status": "Item deleted"}
+    # say whether something was deleted
+    return jsonify({'deleted': cur.rowcount > 0})
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
