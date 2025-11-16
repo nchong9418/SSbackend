@@ -71,7 +71,7 @@ def dataBase():
     db = get_db()
     cur = db.execute('SELECT * FROM "Study Groups"')
     rows = cur.fetchall()
-    return {"study_groups": [dict(row) for row in rows]}
+    return jsonify({row['id']: dict(row) for row in rows})
 
 
 @app.route('/dataBase/singleItem/<int:id>')
