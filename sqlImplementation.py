@@ -1,12 +1,15 @@
 import os
 import sqlite3
-from flask import Flask, g, render_template, request, redirect, url_for
+from flask import Flask, g, request, jsonify    
 import datetime
+from flask_cors import CORS
 
 app = Flask(__name__)
 DATABASE = os.path.join(os.path.dirname(__file__), 'SoakedSocks.db')
 db = sqlite3.connect(DATABASE)
 lastrowid = None
+
+CORS(app) #communicate to frontend
 
 
 '''
@@ -45,6 +48,7 @@ def get_item(item_id):
         return None
     return item
 
+@app.post('/AddItem')
 def add_item(title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp):
     db = get_db()
     cur = db.execute('INSERT INTO "Study Groups" (title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp, createdAt) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)', (title, courseCode, focusLevel, startTime, endTime, location, tags, description, hostName, personLimit, peopleSignedUp, datetime.datetime.now()))
@@ -68,6 +72,26 @@ def dataBase():
     cur = db.execute('SELECT * FROM "Study Groups"')
     rows = cur.fetchall()
     return {"study_groups": [dict(row) for row in rows]}
+
+
+@app.route('/dataBase/singleItem/<int:id>')
+def singleItem(id):
+    db = get_db()
+    cur = db.execute('SELECT * FROM "Study Groups" WHERE id = ?', (id,))
+    row = cur.fetchone()
+    return {row['id']: dict(row)}
+
+@app.route('/SignUpPerson/<int:id>', methods=['GET'])
+def SignUpPerson(id):
+    personSignedUp(id)
+    return jsonify({"success": True})
+
+@app.route('/deleteItem')
+def deleteItem(id):
+    db = get_db()
+    db.execute('DELETE FROM "Study Groups" WHERE id = ?', (id,))
+    db.commit()
+    return {"status": "Item deleted"}
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
